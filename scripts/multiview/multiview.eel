@@ -1,0 +1,185 @@
+// @description Show 1, 2, 3, 4 or 6 videos in a grid, with animated transitions between layouts
+// @version 1.3.0
+// @author Alberto Facelli
+//
+// Multi-view: shows 1, 2, 3, 4 or 6 videos, with an animated transition
+// whenever the number of videos changes.
+// Put it on a track BELOW the tracks that carry video, just like the stock
+// 2x2 preset. Slot order is the same as the stock preset (input_track(0..5)).
+//
+// Automate "Videos" to switch layouts (5 snaps to 6).
+//
+//@param1:nvid 'Videos (1/2/3/4/6)' 4 1 6 3.5 1
+//@param2:dur 'Transition length (s)' 0.6 0 3 1.5 0.05
+//@param3:style 'Transition 0=zoom 1=spring 2=slide' 0 0 2 1 1
+//@param4:gap 'Gap (px)' 0 0 80 40 1
+//@param5:fill 'Crop to fill tiles (0/1)' 0 0 1 0.5 1
+//@param6:bg 'Background brightness' 0 0 1 0.5 0.01
+//
+// Focus points (only used with Crop to fill): where the subject is in each
+// source video. That point is kept as close to the tile centre as the
+// crop allows. 0.5/0.5 = plain centre crop.
+//@param7:fx1 'V1 focus X (0=left 1=right)' 0.5 0 1 0.5 0.01
+//@param8:fy1 'V1 focus Y (0=top 1=bottom)' 0.5 0 1 0.5 0.01
+//@param9:fx2 'V2 focus X (0=left 1=right)' 0.5 0 1 0.5 0.01
+//@param10:fy2 'V2 focus Y (0=top 1=bottom)' 0.5 0 1 0.5 0.01
+//@param11:fx3 'V3 focus X (0=left 1=right)' 0.5 0 1 0.5 0.01
+//@param12:fy3 'V3 focus Y (0=top 1=bottom)' 0.5 0 1 0.5 0.01
+//@param13:fx4 'V4 focus X (0=left 1=right)' 0.5 0 1 0.5 0.01
+//@param14:fy4 'V4 focus Y (0=top 1=bottom)' 0.5 0 1 0.5 0.01
+//@param15:fx5 'V5 focus X (0=left 1=right)' 0.5 0 1 0.5 0.01
+//@param16:fy5 'V5 focus Y (0=top 1=bottom)' 0.5 0 1 0.5 0.01
+//@param17:fx6 'V6 focus X (0=left 1=right)' 0.5 0 1 0.5 0.01
+//@param18:fy6 'V6 focus Y (0=top 1=bottom)' 0.5 0 1 0.5 0.01
+
+// Each tile state is 6 values: x, y, w, h, alpha, on-screen flag
+
+// ---- rectangle of slot i (0-based) when n videos are shown ----
+function set_cell(p, n, i) local(cols, rows, cw, ch, col, row, pos) (
+  cols = (n == 1 ? 1 : ((n == 3 || n == 6) ? 3 : 2));
+  rows = (n <= 3 ? 1 : 2);
+  cw = (project_w - gap*(cols + 1)) / cols;
+  ch = (project_h - gap*(rows + 1)) / rows;
+  // grid position: in 3- and 6-mode video 1 takes the (top-)centre spot
+  // and video 2 moves to the left of it; the rest keep reading order
+  pos = i;
+  ((n == 3 || n == 6) && i < 2) ? (pos = 1 - i);
+  col = pos % cols;
+  row = floor(pos / cols);
+  p[0] = gap + col*(cw + gap);
+  p[1] = gap + row*(ch + gap);
+  p[2] = cw;
+  p[3] = ch;
+  p[4] = 1;
+  p[5] = 1;
+);
+
+// ---- where tile q goes when it is not part of the layout ----
+function set_hidden(p, q) local(cx, cy, dx, dy) (
+  cx = q[0] + q[2]*0.5;
+  cy = q[1] + q[3]*0.5;
+  style == 2 ? (
+    // slide: leave through the nearest screen edge
+    dx = cx/project_w - 0.5;
+    dy = cy/project_h - 0.5;
+    p[0] = q[0];
+    p[1] = q[1];
+    abs(dy) >= abs(dx) ? (
+      p[1] = (dy < 0 ? -q[3] : project_h);
+    ) : (
+      p[0] = (dx < 0 ? -q[2] : project_w);
+    );
+    p[2] = q[2];
+    p[3] = q[3];
+    p[4] = 1;
+  ) : (
+    // zoom / spring: shrink into the tile's centre and fade out
+    p[2] = q[2]*0.2;
+    p[3] = q[3]*0.2;
+    p[0] = cx - p[2]*0.5;
+    p[1] = cy - p[3]*0.5;
+    p[4] = 0;
+  );
+  p[5] = 0;
+);
+
+// ---- easing curve, 0..1 in -> 0..1 out ----
+function ease(x) local(k, u) (
+  k = min(max(x, 0), 1);
+  style == 1 ? (
+    u = k - 1;
+    1 + 2.70158*u*u*u + 1.70158*u*u;             // overshoot, then settle
+  ) : (
+    k < 0.5 ? 4*k*k*k : (u = 2 - 2*k; 1 - 0.5*u*u*u);   // ease in-out cubic
+  );
+);
+
+// ---- draw input i into tile p (fit or crop-to-fill) ----
+function draw_tile(p, i) local(src, iw, ih, x, y, w, h, s, sx, sy, sw, sh, fx, fy) (
+  src = input_track(i);
+  x = p[0];  y = p[1];  w = p[2];  h = p[3];
+  w >= 1 && h >= 1 && p[4] > 0.004 && input_info(src, iw, ih) && iw > 0 && ih > 0 ? (
+    sx = 0;  sy = 0;  sw = iw;  sh = ih;
+    fill ? (
+      // crop the source so it covers the whole tile, centred on the
+      // focus point but never sliding past the edge of the source
+      fx = FOCUS[i*2];
+      fy = FOCUS[i*2 + 1];
+      iw*h > ih*w ? ( sw = ih*w/h; sx = min(max(fx*iw - sw*0.5, 0), iw - sw); )
+                  : ( sh = iw*h/w; sy = min(max(fy*ih - sh*0.5, 0), ih - sh); );
+    ) : (
+      // shrink the tile so the whole source fits (letterbox, no pad fill)
+      iw*h > ih*w ? ( s = h; h = w*ih/iw; y += (s - h)*0.5; )
+                  : ( s = w; w = h*iw/ih; x += (s - w)*0.5; );
+    );
+    gfx_a = min(p[4], 1);
+    gfx_mode = 0;
+    gfx_blit(src, 0, x, y, w, h, sx, sy, sw, sh);
+  );
+);
+
+// ================= per frame =================
+CUR = 0;  FROM = 64;  TO = 128;  STRIDE = 8;  FOCUS = 192;
+
+// focus points as an array, indexed by slot
+FOCUS[0]  = fx1;  FOCUS[1]  = fy1;
+FOCUS[2]  = fx2;  FOCUS[3]  = fy2;
+FOCUS[4]  = fx3;  FOCUS[5]  = fy3;
+FOCUS[6]  = fx4;  FOCUS[7]  = fy4;
+FOCUS[8]  = fx5;  FOCUS[9]  = fy5;
+FOCUS[10] = fx6;  FOCUS[11] = fy6;
+
+want = (nvid < 1.5 ? 1 : (nvid < 2.5 ? 2 : (nvid < 3.5 ? 3 : (nvid < 4.5 ? 4 : 6))));
+
+still  = (time == last_time);            // transport stopped / same frame
+jumped = (abs(time - last_time) > 0.5);  // seek or loop wrap
+last_time = time;
+
+(!inited || jumped || dur <= 0 || (want != shown && still)) ? (
+  // jump straight to the layout, no animation
+  inited = 1;
+  shown = want;
+  t_start = time - 1000;
+  i = 0;
+  loop(6,
+    set_cell(FROM + i*STRIDE, want, i);
+    FROM[i*STRIDE + 5] = (i < want);
+    i += 1;
+  );
+) : want != shown ? (
+  // layout changed: animate from whatever is on screen right now,
+  // so a change in the middle of a transition stays smooth
+  i = 0;
+  loop(6,
+    s = i*STRIDE;
+    memcpy(FROM + s, CUR + s, 6);
+    !FROM[s + 5] && i < want ? (
+      set_cell(TO + s, want, i);
+      set_hidden(FROM + s, TO + s);   // new tile enters from its hidden spot
+    );
+    i += 1;
+  );
+  shown = want;
+  t_start = time;
+);
+
+moving = (time - t_start < dur);
+e = ease((time - t_start) / max(dur, 0.001));
+
+gfx_set(bg, bg, bg, 1);
+gfx_fillrect(0, 0, project_w, project_h);
+
+i = 0;
+loop(6,
+  pf = FROM + i*STRIDE;  pt = TO + i*STRIDE;  pc = CUR + i*STRIDE;
+  i < shown ? set_cell(pt, shown, i) : (pf[5] ? set_hidden(pt, pf) : (pt[5] = 0));
+  (pf[5] || pt[5]) && (moving || pt[5]) ? (
+    j = 0;
+    loop(5, pc[j] = pf[j] + (pt[j] - pf[j])*e; j += 1; );
+    pc[5] = 1;
+    draw_tile(pc, i);
+  ) : (
+    pc[5] = 0;
+  );
+  i += 1;
+);

@@ -1,0 +1,19 @@
+// @description {{description}}
+// @version 0.1.0
+// @author {{author}}
+//
+// {{name}}: put this Video processor on a track BELOW the track(s) with video.
+// input_track(0) is the nearest video track above.
+//
+//@param1:amount 'Amount' 1 0 1 0.5 0.01
+
+src = input_track(0);
+
+gfx_set(0, 0, 0, 1);
+gfx_fillrect(0, 0, project_w, project_h);
+
+input_info(src, iw, ih) ? (
+  gfx_a = amount;
+  gfx_mode = 0;
+  gfx_blit(src, 1, 0, 0, project_w, project_h);
+);
