@@ -1,0 +1,5 @@
+# GitHub's language detector doesn't know EEL2 (.eel), so without this the repo
+# shows up as "Python" just because of the helper in tools/. Leave tools out of
+# the language stats; the scripts themselves can't be labelled, so the repo
+# shows no language rather than the wrong one.
+tools/** linguist-detectable=false
