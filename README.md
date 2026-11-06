@@ -7,6 +7,7 @@ Scripts for REAPER's **Video processor** plugin: layouts, transitions and other 
 <!-- catalog:start -->
 | Script | What it does | Version |
 |---|---|---|
+| [fade-to-colour](scripts/fade-to-colour/) | Fade the video to black, to white, or to a colour you pick | 1.0.0 |
 | [multiview](scripts/multiview/) | Show 1, 2, 3, 4 or 6 videos in a grid, with animated transitions between layouts | 1.3.0 |
 <!-- catalog:end -->
 
