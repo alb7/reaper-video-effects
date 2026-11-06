@@ -60,14 +60,5 @@ Video slots are numbered the same way as in the stock preset (`input_track(0)` i
 
 ## Changelog
 
-### 1.3.0
-- New 3-video layout: `[2] [1] [3]`. 3 no longer rounds up to 4.
-
-### 1.2.0
-- In 6-video mode, video 1 takes the top-centre position and video 2 moves to top-left.
-
-### 1.1.0
-- Per-video focus X/Y for Crop to fill.
-
 ### 1.0.0
-- First version: 1/2/4/6 layouts, zoom/spring/slide transitions, gap, crop to fill, background.
+- First release: 1, 2, 3, 4 and 6-video layouts (video 1 in the centre for 3 and 6), zoom/spring/slide transitions, gap, background, and crop to fill with per-video focus points.

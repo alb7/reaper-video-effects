@@ -1,0 +1,47 @@
+// @description Fade the video to black, to white, or to a colour you pick
+// @version 1.0.0
+// @author Alberto Facelli
+//
+// Put this Video processor on the track (or item) whose video you want to fade,
+// AFTER any colour effects such as Colorize, otherwise they tint the fade.
+// Automate a fade from 0 (untouched video) to 1 (solid colour).
+//
+// The fades stack in this order: colour, then white, then black on top.
+// So black at 1 always gives black, whatever the other two are doing.
+//
+// Params 8 and 9 keep the indices of the older Brightness/Contrast-based
+// version, so pasting this code over it keeps existing fade envelopes working.
+//
+//@param8:fade_white 'Fade to white' 0 0 1 0.5 0.01
+//@param9:fade_black 'Fade to black' 0 0 1 0.5 0.01
+//@param10:fade_colour 'Fade to colour' 0 0 1 0.5 0.01
+//@param11:colour_r 'Colour red (0-255)' 128 0 255 128 1
+//@param12:colour_g 'Colour green (0-255)' 128 0 255 128 1
+//@param13:colour_b 'Colour blue (0-255)' 128 0 255 128 1
+
+// Crossfade the whole frame toward one colour: a fill at alpha = amount.
+// All channels move together, so there is no colour cast on the way
+// (raising brightness alone left a yellow tint, because in YUV only the
+// lightness moved while the colour stayed).
+function fade_to(r, g, b, amount) (
+  amount > 0 ? (
+    gfx_set(r, g, b, min(amount, 1));
+    gfx_fillrect(0, 0, project_w, project_h);
+  );
+);
+
+// Start from the incoming video at its own size, like the stock presets.
+// With no video (a gap between items) start from black, so a fade held
+// at 1 across the gap still shows its colour.
+input_info(0, project_w, project_h) ? (
+  gfx_mode = 0;
+  gfx_a = 1;
+  gfx_blit(0);
+) : (
+  gfx_set(0, 0, 0, 1);
+  gfx_fillrect(0, 0, project_w, project_h);
+);
+
+fade_to(colour_r/255, colour_g/255, colour_b/255, fade_colour);
+fade_to(1, 1, 1, fade_white);
+fade_to(0, 0, 0, fade_black);
