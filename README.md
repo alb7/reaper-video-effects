@@ -30,19 +30,6 @@ templates/script/    starting point for new scripts
 docs/                notes on the Video processor API and its gotchas
 tools/vp.py          checks scripts, scaffolds new ones, updates the table above
 ```
-
-## Developing
-
-```sh
-python3 tools/vp.py new my-effect "What it does"   # scaffold a new script
-python3 tools/vp.py check                          # lint everything (also runs in CI)
-python3 tools/vp.py catalog                        # refresh the table above
-```
-
-`vp.py check` catches the EEL2 mistakes that are easy to make and hard to see: unparenthesized ternaries, variable names that differ only in case (EEL2 ignores case), unbalanced parentheses, and bad `//@param` lines. It also checks that each script's version has a changelog entry.
-
-### Working with Claude
-
 `CLAUDE.md` tells Claude how this repo works, so you can ask for a new script or a change in any Claude Code session that has the repo connected. If the Claude GitHub workflow is set up (see `.github/workflows/claude.yml`), you can also open an issue or comment on one with `@claude` and a request, and Claude replies with a pull request.
 
 ## License
